@@ -1,23 +1,37 @@
 document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    const NFC_TAP_URL = 'http://localhost:5000/nfc-tap';
+    const QUEUE_STATUS_URL = 'http://localhost:5000/queue';
+    const useBackendQueue = true;
+
+    const queueSequence = Array.from({ length: 12 }, (_, index) => {
+        const numberValue = index + 1;
+        return `A-${numberValue.toString().padStart(3, '0')}`;
+    });
+    const assignedQueueNumber = queueSequence[queueSequence.length - 1];
+
     let queueData = {
-        currentTicket: 'A-012',
+        currentTicket: queueSequence[0],
         currentWindow: 1,
         estimatedWaitTime: 18,
-        nextTickets: ['A-013', 'A-014', 'A-015'],
-        allTickets: [
-            { ticket: 'A-012', window: 1, status: 'serving' },
-            { ticket: 'A-013', window: null, status: 'waiting' },
-            { ticket: 'A-014', window: null, status: 'waiting' },
-            { ticket: 'A-015', window: null, status: 'waiting' },
-            { ticket: 'A-016', window: null, status: 'waiting' },
-            { ticket: 'A-017', window: null, status: 'waiting' }
-        ]
+        nextTickets: queueSequence.slice(1),
+        allTickets: queueSequence.map((ticket, index) => ({
+            ticket,
+            window: index === 0 ? 1 : null,
+            status: index === 0 ? 'serving' : 'waiting'
+        }))
     };
 
     const currentTicketElement = document.querySelector('.current-ticket');
     const timerElement = document.querySelector('.timer');
     const nextListElement = document.querySelector('.next-list');
     const windowTextElement = document.querySelector('.main-number .par b');
+    const assignedQueueElement = document.querySelector('.your-queue-number');
+    const logoutButton = document.querySelector('.logout-btn a');
 
     function updateDashboard() {
         if (currentTicketElement) {
@@ -52,6 +66,101 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function formatTicketNumber(numberValue) {
+        if (typeof numberValue !== 'number' || Number.isNaN(numberValue)) {
+            return null;
+        }
+        return `A-${numberValue.toString().padStart(3, '0')}`;
+    }
+
+    function applyQueueStatus(payload) {
+        if (!payload || typeof payload !== 'object') {
+            return false;
+        }
+
+        const status = payload.queue_status || payload.queueStatus || payload;
+        if (!status || typeof status !== 'object') {
+            return false;
+        }
+
+        let updated = false;
+
+        if (typeof status.current_ticket === 'string') {
+            queueData.currentTicket = status.current_ticket;
+            updated = true;
+        } else if (typeof status.currentTicket === 'string') {
+            queueData.currentTicket = status.currentTicket;
+            updated = true;
+        }
+
+        if (typeof status.current_window === 'number') {
+            queueData.currentWindow = status.current_window;
+            updated = true;
+        } else if (typeof status.currentWindow === 'number') {
+            queueData.currentWindow = status.currentWindow;
+            updated = true;
+        }
+
+        if (typeof status.estimated_wait_time === 'number') {
+            queueData.estimatedWaitTime = status.estimated_wait_time;
+            updated = true;
+        } else if (typeof status.estimatedWaitTime === 'number') {
+            queueData.estimatedWaitTime = status.estimatedWaitTime;
+            updated = true;
+        }
+
+        if (Array.isArray(status.next_tickets)) {
+            queueData.nextTickets = status.next_tickets.slice();
+            updated = true;
+        } else if (Array.isArray(status.nextTickets)) {
+            queueData.nextTickets = status.nextTickets.slice();
+            updated = true;
+        }
+
+        if (!updated && typeof status.queue_number === 'number') {
+            const ticket = formatTicketNumber(status.queue_number);
+            if (ticket && !queueData.nextTickets.includes(ticket)) {
+                queueData.nextTickets.push(ticket);
+                updated = true;
+            }
+        }
+
+        return updated;
+    }
+
+    async function handleNFCTap(studentId) {
+        try {
+            const response = await fetch(NFC_TAP_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    uid: studentId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('NFC tap response:', data);
+
+            if (data && data.error) {
+                throw new Error(data.error);
+            }
+
+            const didUpdate = applyQueueStatus(data);
+            if (didUpdate) {
+                updateDashboard();
+            }
+        } catch (error) {
+            console.error('NFC tap error:', error);
+        }
+    }
+
     function advanceQueue() {
         const servedTicket = queueData.currentTicket;
         
@@ -60,11 +169,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             queueData.nextTickets = queueData.nextTickets.slice(1);
             
-            const lastTicketNumber = parseInt(queueData.nextTickets[queueData.nextTickets.length - 1]?.split('-')[1] || 
+            const lastTicketNumber = parseInt(queueData.nextTickets[queueData.nextTickets.length - 1]?.split('-')[1] ||
                                             queueData.currentTicket.split('-')[1]);
-            const newTicketNumber = lastTicketNumber + 1;
-            const newTicket = `A-${newTicketNumber.toString().padStart(3, '0')}`;
-            queueData.nextTickets.push(newTicket);
+            if (lastTicketNumber < queueSequence.length) {
+                const newTicketNumber = lastTicketNumber + 1;
+                const newTicket = `A-${newTicketNumber.toString().padStart(3, '0')}`;
+                queueData.nextTickets.push(newTicket);
+            }
             
             queueData.currentWindow = Math.floor(Math.random() * 3) + 1;
             
@@ -83,6 +194,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function addNewTicket() {
         const lastTicket = queueData.nextTickets[queueData.nextTickets.length - 1];
         const lastNumber = parseInt(lastTicket.split('-')[1]);
+        if (lastNumber >= queueSequence.length) {
+            return;
+        }
         const newTicketNumber = lastNumber + 1;
         const newTicket = `A-${newTicketNumber.toString().padStart(3, '0')}`;
         
@@ -98,29 +212,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    let queueInterval = setInterval(advanceQueue, 30000);
+    let queueInterval = null;
+    let ticketInterval = null;
 
-    let ticketInterval = setInterval(() => {
-        if (Math.random() > 0.5) {
-            addNewTicket();
-        }
-    }, 15000);
-
-    if (!localStorage.getItem('isLoggedIn')) {
-        setTimeout(() => {
-            if (confirm('You are not logged in. Go to login page?')) {
-                window.location.href = 'index.html';
+    if (!useBackendQueue) {
+        queueInterval = setInterval(advanceQueue, 30000);
+        ticketInterval = setInterval(() => {
+            if (Math.random() > 0.5) {
+                addNewTicket();
             }
-        }, 2000);
+        }, 15000);
     }
 
-    const exitButton = document.querySelector('.btnn a[href="index.html"]');
+
+    const exitButton = document.querySelector('.exit-dashboard a');
     if (exitButton) {
         exitButton.addEventListener('click', function(e) {
             e.preventDefault();
             
-            clearInterval(queueInterval);
-            clearInterval(ticketInterval);
+            if (queueInterval) {
+                clearInterval(queueInterval);
+            }
+            if (ticketInterval) {
+                clearInterval(ticketInterval);
+            }
             
             if (confirm('Are you sure you want to exit the dashboard?')) {
                 if (confirm('Do you want to logout?')) {
@@ -130,6 +245,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 window.location.href = 'index.html';
             }
+        });
+    }
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('studentId');
+            window.location.href = 'index.html';
         });
     }
 
@@ -149,6 +273,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     updateDashboard();
     simulateRealTimeUpdates();
+
+    function updateAssignedQueue() {
+        if (!assignedQueueElement) {
+            return;
+        }
+        const storedQueue = localStorage.getItem('assignedQueue');
+        assignedQueueElement.textContent = storedQueue || assignedQueueNumber;
+    }
+
+    async function refreshNowServing() {
+        if (!useBackendQueue) {
+            return;
+        }
+        try {
+            const response = await fetch(QUEUE_STATUS_URL);
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+            const data = await response.json();
+            const currentLabel = data.current_queue_label || 'A-000';
+
+            if (currentTicketElement) {
+                currentTicketElement.textContent = currentLabel;
+            }
+        } catch (error) {
+            console.error('Queue refresh error:', error);
+        }
+    }
+
+    updateAssignedQueue();
+    refreshNowServing();
+    if (useBackendQueue) {
+        setInterval(refreshNowServing, 5000);
+    }
 
     function showNotification(message, type) {
         const existingNotification = document.querySelector('.notification');
@@ -220,7 +378,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     window.addEventListener('beforeunload', function() {
-        clearInterval(queueInterval);
-        clearInterval(ticketInterval);
+        if (queueInterval) {
+            clearInterval(queueInterval);
+        }
+        if (ticketInterval) {
+            clearInterval(ticketInterval);
+        }
     });
+
+    window.handleNFCTap = handleNFCTap;
 });

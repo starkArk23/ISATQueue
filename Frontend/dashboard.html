@@ -24,10 +24,17 @@
             <div class="main-number">
                 <h1>Now <br><span>Serving</span></h1>
                 <p class="current-ticket">A-012</p>
+                <div class="your-queue-box">
+                    <p class="your-queue-label">Your Queue Number</p>
+                    <p class="your-queue-number">A-012</p>
+                </div>
                 <p class="par">Please proceed to <b>Window 1</b>. <br> 
                 Have your requirements ready for faster processing.</p>
             </div>
             
+            <div class="dashboard-logout">
+                <button class="btnn logout-btn"><a href="index.html">Logout</a></button>
+            </div>
             <div class="form dashboard-card">
                 <h2>Queue Status</h2>
                 
@@ -36,13 +43,17 @@
                     <span class="timer">18 MINS</span>
                 </div>
 
-                <div class="next-list">
-                    <div class="row"><span>NEXT:</span> <b>A-013</b></div>
-                    <div class="row"><span>FOLLOWING:</span> <b>A-014</b></div>
-                    <div class="row"><span>FOLLOWING:</span> <b>A-015</b></div>
-                </div>
-
-                <button class="btnn"><a href="index.html">Exit Dashboard</a></button>
+                <details class="queue-dropdown">
+                    <summary>Following Queue</summary>
+                    <div class="next-list">
+                        <div class="row"><span>NEXT:</span> <b>A-013</b></div>
+                        <div class="row"><span>FOLLOWING:</span> <b>A-014</b></div>
+                        <div class="row"><span>FOLLOWING:</span> <b>A-015</b></div>
+                    </div>
+                </details>
+            </div>
+            <div class="dashboard-actions">
+                <button class="btnn exit-dashboard"><a href="index.html">Exit Dashboard</a></button>
             </div>
         </div>
     </div>

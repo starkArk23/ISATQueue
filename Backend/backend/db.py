@@ -2,20 +2,22 @@ from typing import Tuple
 
 import mysql.connector
 from mysql.connector import Error
+from mysql.connector.abstracts import MySQLConnectionAbstract
+from mysql.connector.pooling import PooledMySQLConnection
 
-from config import DBConfig
+import config
 
 
-def get_connection() -> mysql.connector.MySQLConnection:
+def get_connection() -> PooledMySQLConnection | MySQLConnectionAbstract:
     """Creates a new MySQL connection."""
     # Read connection settings from environment or defaults.
-    config = DBConfig()
+    config_obj = config.DBConfig()
     return mysql.connector.connect(
-        host=config.host,
-        port=config.port,
-        user=config.user,
-        password=config.password,
-        database=config.database,
+        host=config_obj.host,
+        port=config_obj.port,
+        user=config_obj.user,
+        password=config_obj.password,
+        database=config_obj.database,
     )
 
 

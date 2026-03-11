@@ -3,12 +3,15 @@
     padding: 0; 
 
 }
+body{
+    background: #000;
+}
 .main{
     width: 100%;
     background-image: url("4.jpg");
     background-position: center;
     background-size: cover;
-    height: 109vh;
+    min-height: 100vh;
 }
 .navbar{
     width: 1200px;
@@ -16,6 +19,20 @@
     margin: auto;
 
 }
+.dashboard-actions{
+    position: absolute;
+    top: 430px;
+    left: 870px;
+    width: 250px;
+    text-align: center;
+}
+
+.dashboard-actions .btnn{
+    margin-top: 16px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .icon{
     width: 200px;
     float: left;
@@ -54,6 +71,11 @@ ul li a{
     font-family: arial;
     font-weight: bold;
     transition: 0.4s ease-in-out;
+}
+ul li a.is-disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 ul li a:hover{
     color: white;
@@ -207,6 +229,16 @@ ul li a:hover{
     color: #030083;
 
 }
+.dashboard-logout{
+    position: absolute;
+    top: -70px;
+    left: 870px;
+    width: 250px;
+}
+
+.dashboard-logout .btnn{
+    margin-top: 0;
+}
 .current-ticket {
     font-size: 160px;
     font-weight: bold;
@@ -214,6 +246,34 @@ ul li a:hover{
     margin-top: -20px;
     font-family: 'Arial Black', sans-serif;
     text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+}
+
+.your-queue-box {
+    margin-top: 12px;
+    padding: 12px 16px;
+    text-align: center;
+    background: #0a00b3;
+    border: 1px solid #ffcb00;
+    border-radius: 10px;
+    width: 320px;
+    margin-left: 20px;
+}
+
+.your-queue-label {
+    font-size: 16px;
+    font-family: Arial, sans-serif;
+    color: #ffcb00;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.your-queue-number {
+    font-size: 64px;
+    font-weight: bold;
+    color: #ffcb00;
+    font-family: 'Arial Black', sans-serif;
+    text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+    margin-top: 6px;
 }
 
 .ai-box {
@@ -234,8 +294,40 @@ ul li a:hover{
     color: #ffcb00;
 }
 
+.queue-dropdown{
+    margin-top: 16px;
+    background: #0a00b3;
+    border: 1px solid #ffcb00;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+.queue-dropdown summary{
+    cursor: pointer;
+    color: #ffcb00;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    list-style: none;
+}
+
+.queue-dropdown summary::-webkit-details-marker{
+    display: none;
+}
+
+.queue-dropdown summary::after{
+    content: "\25BC";
+    float: right;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.queue-dropdown[open] summary::after{
+    content: "\25B2";
+}
+
 .next-list {
-    margin-top: 15px;
+    margin-top: 10px;
     width: 100%;
     display: flex;
     flex-direction: column;

@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 
-from db import ensure_schema, get_connection, get_or_create_queue_number
+import db
 
 
 def create_app() -> Flask:
@@ -19,14 +19,14 @@ def create_app() -> Flask:
 
         # Connect to the database.
         try:
-            conn = get_connection()
+            conn = db.get_connection()
         except Exception as exc:
             return jsonify({"error": f"Database connection failed: {exc}"}), 500
 
         try:
             # Ensure the table exists and get the queue number.
-            ensure_schema(conn)
-            queue_number, _ = get_or_create_queue_number(conn, uid)
+            db.ensure_schema(conn)
+            queue_number, _ = db.get_or_create_queue_number(conn, uid)
             return jsonify({"queue_number": queue_number})
         except Exception as exc:
             return jsonify({"error": f"Database error: {exc}"}), 500

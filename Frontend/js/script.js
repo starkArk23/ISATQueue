@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const NFC_TAP_URL = 'http://localhost:5000/tap-nfc';
     const loginForm = document.querySelector('.form');
     const studentIdInput = document.querySelector('input[name="StudentID"]');
     const passwordInput = document.querySelector('input[type="password"]');
@@ -7,6 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const nfcButton = document.querySelector('.cn');
     const searchButton = document.querySelector('.btn');
     const searchInput = document.querySelector('.srch');
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const dashboardLink = document.querySelector('.menu ul li a[href="dashboard.html"]');
 
     if (loginButton) {
         loginButton.addEventListener('click', function(e) {
@@ -20,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            if (studentId.length >= 5 && password.length >= 4) {
+            if (studentId.length >= 5 && password === 'student') {
                 showNotification('Login successful! Redirecting to dashboard...', 'success');
                 
                 localStorage.setItem('isLoggedIn', 'true');
@@ -58,23 +61,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    async function handleNFCTap() {
+        showNotification('Scanning for NFC card...', 'info');
+
+        const studentId = studentIdInput?.value.trim() || 'MOCK-UID-001';
+
+        try {
+            const response = await fetch(NFC_TAP_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    uid: studentId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('NFC tap response:', data);
+
+            if (data && data.error) {
+                throw new Error(data.error);
+            }
+
+            const queueLabel = data.queue_label || 'A-000';
+            localStorage.setItem('assignedQueue', queueLabel);
+
+            if (studentIdInput) {
+                studentIdInput.value = studentId;
+            }
+
+            showNotification(`NFC tap recorded. Queue: ${queueLabel}`, 'success');
+        } catch (error) {
+            console.error('NFC tap error:', error);
+            showNotification('NFC tap failed. Please try again.', 'error');
+        }
+    }
+
     if (nfcButton) {
         nfcButton.addEventListener('click', function(e) {
             e.preventDefault();
-            
-            showNotification('Scanning for NFC card...', 'info');
-            
-            setTimeout(() => {
-                if (Math.random() > 0.2) {
-                    showNotification('NFC card detected! Student ID: 2024-12345', 'success');
-                    
-                    if (studentIdInput) {
-                        studentIdInput.value = '2024-12345';
-                    }
-                } else {
-                    showNotification('No NFC card detected. Please try again.', 'error');
-                }
-            }, 2000);
+            handleNFCTap();
         });
     }
 
@@ -102,16 +134,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const menuLinks = document.querySelectorAll('.menu ul li a');
     menuLinks.forEach(link => {
         link.addEventListener('mouseenter', function() {
+            if (this.classList.contains('is-disabled')) {
+                return;
+            }
             this.style.transform = 'scale(1.1)';
         });
         
         link.addEventListener('mouseleave', function() {
+            if (this.classList.contains('is-disabled')) {
+                return;
+            }
             this.style.transform = 'scale(1)';
         });
     });
 
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (isLoggedIn === 'true' && window.location.pathname.includes('index.html')) {
+    if (!isLoggedIn && dashboardLink) {
+        dashboardLink.classList.add('is-disabled');
+        dashboardLink.setAttribute('aria-disabled', 'true');
+        dashboardLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            showNotification('Please log in to access the live dashboard', 'info');
+        });
+    }
+
+    if (isLoggedIn && window.location.pathname.includes('index.html')) {
         setTimeout(() => {
             if (confirm('You are already logged in. Go to dashboard?')) {
                 window.location.href = 'dashboard.html';
